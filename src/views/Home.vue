@@ -35,7 +35,7 @@ export default class Home extends Vue {
 
   private loadTrips(): Promise<TripResponse> {
     return new Promise((resolve, reject) => {
-        axios.get('trips.json')
+        axios.get('data/trips.json')
         .then((response) => {
             resolve(response.data as TripResponse)
         }, (err) => {

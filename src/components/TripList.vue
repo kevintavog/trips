@@ -1,7 +1,9 @@
 <template>
   <div class="triplist">
-      <div v-if="tripResponse" >
-        <TripCard v-for="trip in tripResponse.trips" :trip="trip" :key="trip.startDate" />
+      <div v-if="tripResponse" class="columns is-multiline is-mobile is-gapless">
+        <div class="column" v-for="trip in tripResponse.trips" :key="trip.startDate">
+          <TripCard :trip="trip" />
+        </div>
       </div>
       <div v-else>
         No trips were found.

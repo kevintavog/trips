@@ -9,6 +9,7 @@ export interface Trip {
     endDate: Date
     endTimezoneId: string
     countries: TripCountry[]
+    health: TripHealth[]
 }
 
 export interface TripCountry {
@@ -19,4 +20,11 @@ export interface TripCountry {
 export interface TripCity {
     name: string
     sites: string[]
+}
+
+export interface TripHealth {
+    sourceName: string
+    totalSteps: number
+    totalFlights: number
+    totalMeters: number
 }
