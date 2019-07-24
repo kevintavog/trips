@@ -27,4 +27,12 @@ export interface TripHealth {
     totalSteps: number
     totalFlights: number
     totalMeters: number
+    daily: TripDayHealth[]
+}
+
+export interface TripDayHealth {
+    day: string
+    steps: number
+    flights: number
+    meters: number
 }
