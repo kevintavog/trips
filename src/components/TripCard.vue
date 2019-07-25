@@ -15,12 +15,9 @@
       >{{ dateOnly(trip.startDate, trip.startTimezoneId) }} - {{ dateOnly(trip.endDate, trip.endTimezoneId) }}</div>
 
       <div v-if="trip.health">
-        <apexchart
-          height="200"
-          type="line"
-          :options="healthChartOptions"
-          :series="healthChartSeries"
-        ></apexchart>
+        <div class="canvas-container">
+          <canvas class="health-chart" ref="canvas" />
+        </div>
 
         <div
           v-for="health in trip.health"
@@ -62,86 +59,59 @@
 import { Component, Inject, Prop, Vue } from 'vue-property-decorator'
 import { Trip, TripCity } from '@/models/Trip'
 import { DateTime } from 'luxon'
+import { Chart } from 'chart.js'
 
 @Component
 export default class TripCard extends Vue {
   @Prop({ required: true }) private trip!: Trip
-  private healthChartSeries = [
-    {
-      name: 'Steps',
-      type: 'column',
-      data: [0],
-    }, {
-      name: 'Kilometers',
-      type: 'column',
-      data: [0],
-    }, {
-      name: 'Flights',
-      type: 'line',
-      data: [0],
+  private canvasElement?: HTMLCanvasElement
+  private chart?: Chart
+  private chartData: Chart.ChartData = {}
+  private options: Chart.ChartOptions = {
+    animation: {
+      duration: 0,
     },
-  ]
-
-  private healthChartOptions = {
-    chart: {
-      height: 350,
-      type: 'line',
-      stacked: false,
+    tooltips: {
+      enabled: true,
+      mode: 'index',
+      intersect: false,
+      position: 'nearest',
     },
-    dataLabels: {
-      enabled: false,
-    },
-    title: {
-      text: 'Health activity',
-      align: 'left',
-      offsetX: 110,
-    },
-    stroke: {
-      width: [1, 1, 4],
-    },
-    xaxis: {
-      categories: [''],
-    },
-    yaxis: [
-      {
-        axisTicks: {
-          show: true,
+    responsive: true,
+    responsiveAnimationDuration: 0,
+    maintainAspectRatio: false,
+    scales: {
+      yAxes: [{
+        type: 'linear',
+        display: false,
+        position: 'left',
+        id: 'y-axis-100',
+        gridLines: {        
+          color: 'rgba(255, 255, 255, 0.3)',
         },
-        axisBorder: {
-          show: true,
-          color: '#008FFB',
+        ticks: {
+          min: 0,
+          max: 35000,
         },
-        tooltip: {
-          enabled: true,
+      }, {
+        type: 'linear',
+        display: false,
+        position: 'right',
+        id: 'y-axis-1',
+        gridLines: {
+          drawOnChartArea: false, // only want the grid lines for one axis to show up
         },
-      },
-      {
-        opposite: true,
-        axisTicks: {
-          show: true,
+        ticks: {
+          min: 0,
+          max: 100,
         },
-        axisBorder: {
-          show: true,
-          color: '#FEB019',
-        },
-      },
-    ],
-    tooltip: {
-      fixed: {
-        enabled: true,
-        position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
-        offsetY: 30,
-        offsetX: 60,
-      },
-    },
-    legend: {
-      horizontalAlign: 'left',
-      offsetX: 40,
+      }],
     },
   }
 
 
   private mounted() {
+    this.initializeChart()
     this.setHealthDataSeries()
   }
 
@@ -169,40 +139,66 @@ export default class TripCard extends Vue {
     return `${Math.floor(distance / 1000)} km`
   }
 
+  private initializeChart() {
+    this.canvasElement = this.$refs['canvas'] as HTMLCanvasElement
+    Chart.defaults.global.defaultFontColor = 'rgba(255, 255, 255, 255)'
+    this.chart = new Chart(
+      this.canvasElement, {
+        type: 'bar',
+        data: this.chartData,
+        options: this.options,
+      })
+
+  }
+
   private setHealthDataSeries() {
     if (!this.trip || !this.trip!.health || this.trip!.health.length < 1) {
       return
     }
 
-    this.healthChartSeries[0].data = this.trip!.health[0].daily.map((d) => d.steps)
-    this.healthChartSeries[1].data = this.trip!.health[0].daily.map((d) => Math.floor(d.meters))
-    this.healthChartSeries[2].data = this.trip!.health[0].daily.map((d) => d.flights)
-    this.healthChartOptions.xaxis.categories = this.trip!.health[0].daily.map((d) => d.day.slice(5))
-    // chart.updateOptions(this.healthChartOptions, false, false)
+    this.chartData.datasets = []
+    this.chartData.datasets.push({
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      borderColor: 'rgba(0, 227, 153, 0.7)',
+      data: this.trip!.health[0].daily.map((d) => d.steps),
+      fill: false,
+      label: 'Steps',
+      pointStyle: 'circle',
+      pointRadius: 5,
+      type: 'line',
+      yAxisID: 'y-axis-100',
+    })
+
+    this.chartData.datasets.push({
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      borderColor: 'rgba(0, 143, 253, 0.7)',
+      data: this.trip!.health[0].daily.map((d) => Math.floor(d.meters)),
+      fill: false,
+      label: 'Meters',
+      pointRadius: 5,
+      pointStyle: 'triangle',
+      type: 'line',
+    })
+
+    this.chartData.datasets.push({
+      backgroundColor: 'rgba(254, 216, 25, 0.7)',
+      borderColor: 'rgba(254, 216, 25, 0.7)',
+      data: this.trip!.health[0].daily.map((d) => d.flights),
+      label: 'Flights',
+      pointStyle: 'rect',
+      type: 'bar',
+      yAxisID: "y-axis-1",
+    })
+
+    this.chartData.labels = this.trip!.health[0].daily.map((d) => d.day.slice(5))
+
+    this.chart!.update( {duration: 0} )
   }
 }
 </script>
 
 
 <style>
-.apexcharts-tooltip.light {
-  background-color: transparent;
-}
-.apexcharts-toolbar {
-  display: none !important;
-}
-.apexcharts-title-text {
-  background-color: orange;
-}
-.apexcharts-tooltip-title {
-  display: none;
-}
-.apexcharts-tooltip {
-  display: flex;
-  border: 0;
-  box-shadow: none;
-  background-color: red;
-}
 </style>
 
 
@@ -232,5 +228,16 @@ export default class TripCard extends Vue {
   background-color: hsl(217, 71%, 23%);
   margin-bottom: 5px;
   margin-right: 3px;
+}
+
+.canvas-container {
+  height: 150px;
+}
+
+.health-chart {
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  padding: 0px;
 }
 </style>
