@@ -154,29 +154,17 @@ export default class TripView extends Vue {
     const props = this.$route.query
     let id = ''
     if ('id' in props) {
-      id = props['id'] as string
+      id = props[`id`] as string
     }
     this.tripService!.getTrip(id)
       .then((results) => {
         this.trip = results
-        // this.initializeChart()
         // this.setHealthDataSeries()
+        // this.initializeChart()
       })
       .catch((err) => {
         this.messages.push(`Failed loading: ` + err)
       })
-  }
-
-  private initializeChart() {
-    this.canvasElement = this.$refs['canvas'] as HTMLCanvasElement
-    Chart.defaults.global.defaultFontColor = 'rgba(255, 255, 255, 255)'
-    this.chart = new Chart(
-      this.canvasElement, {
-        type: 'horizontalBar',
-        data: this.chartData,
-        options: this.options,
-      })
-
   }
 
   // TripHealth is returned because it has a `sourceName`
@@ -195,6 +183,19 @@ export default class TripView extends Vue {
       }
     }
     return health
+  }
+
+  private initializeChart() {
+    this.canvasElement = this.$refs[`canvas`] as HTMLCanvasElement
+    Chart.defaults.global.defaultFontColor = 'rgba(255, 255, 255, 255)'
+    this.chart = new Chart(
+      this.canvasElement, {
+        type: 'horizontalBar',
+        data: this.chartData,
+        options: this.options,
+      })
+
+    this.chart!.update( {duration: 0} )
   }
 
   private setHealthDataSeries() {
@@ -243,10 +244,9 @@ export default class TripView extends Vue {
 
     this.chartData.labels = this.trip!.health[0].daily.map((d) => d.day.slice(5))
 
-    this.options.scales.xAxes[0].ticks.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
-    this.options.scales.xAxes[1].ticks.max = 5 * (1 + Math.floor(maxFlights / 5))
-
-    this.chart!.update( {duration: 0} )
+    const axes = this.options.scales!.xAxes!
+    axes[0]!.ticks!.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
+    axes[1]!.ticks!.max = 5 * (1 + Math.floor(maxFlights / 5))
   }
 
 }

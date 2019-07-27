@@ -25,18 +25,33 @@ export default class App extends Vue {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/*
-#nav {
-  padding: 30px;
+a {
+  color: white !important;
+  text-decoration: underline !important;
 }
 
-#nav a {
-  font-weight: bold;
-  color: #2c3e50;
+a:visited {
+  color: white !important;
 }
 
-#nav a.router-link-exact-active {
-  color: #42b983;
+a:hover {
+  color: white !important;
 }
-*/
+
+a:link {
+  color: white !important;
+}
+
+.trp-text-steps-color {
+  color: rgba(0, 227, 153, 0.7);
+}
+
+.trp-text-distance-color {
+  color: rgba(0, 143, 253, 0.7);
+}
+
+.trp-text-flights-color {
+  color: rgba(254, 216, 25, 0.7);
+}
+
 </style>
