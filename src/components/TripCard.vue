@@ -56,15 +56,15 @@
               </span>
               <span class="column health-column is-narrow has-text-centered">
                 <b-icon icon="walking" size="is-small" class="health-icon" />
-                {{ displayable.stepsString(health.totalSteps) }} steps
+                {{ displayable.stepsString(health.steps) }} steps
               </span>
               <span class="column health-column is-narrow has-text-centered">
                 <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
-                {{ health.totalFlights }} flights
+                {{ health.flights }} flights
               </span>
               <span class="column health-column is-narrow has-text-centered">
                 <b-icon icon="ruler" size="is-small" class="health-icon" />
-                {{ displayable.metersString(health.totalMeters) }}
+                {{ displayable.metersString(health.meters) }}
               </span>
             </div>
           </div>
@@ -178,7 +178,7 @@ export default class TripCard extends Vue {
     this.chartData.datasets.push({
       backgroundColor: 'rgba(0, 0, 0, 0)',
       borderColor: 'rgba(0, 227, 153, 0.7)',
-      data: this.trip!.health[0].daily.map((d) => d.steps),
+      data: this.trip!.daily.map((d) => d.health.length > 0 ? d.health[0].steps : 0),
       label: 'Steps',
       type: 'line',
       yAxisID: 'y-axis-100',
@@ -188,7 +188,7 @@ export default class TripCard extends Vue {
     this.chartData.datasets.push({
       backgroundColor: 'rgba(0, 0, 0, 0)',
       borderColor: 'rgba(0, 143, 253, 0.7)',
-      data: this.trip!.health[0].daily.map((d) => Math.floor(d.meters)),
+      data: this.trip!.daily.map((d) => d.health.length > 0 ? Math.floor(d.health[0].meters) : 0),
       fill: true,
       label: 'Meters',
       type: 'line',
@@ -198,7 +198,7 @@ export default class TripCard extends Vue {
     this.chartData.datasets.push({
       backgroundColor: 'rgba(254, 216, 25, 0.7)',
       borderColor: 'rgba(254, 216, 25, 0.7)',
-      data: this.trip!.health[0].daily.map((d) => d.flights),
+      data: this.trip!.daily.map((d) => d.health.length > 0 ? d.health[0].flights : 0),
       label: 'Flights',
       type: 'bar',
       yAxisID: 'y-axis-1',
@@ -207,15 +207,18 @@ export default class TripCard extends Vue {
 
     let maxStepsDistance = 0
     let maxFlights = 0
-    maxStepsDistance = this.trip!.health[0].daily.reduce( (v, d) =>
-      Math.max(v, Math.max(d.steps, d.flights)), maxStepsDistance)
-    maxFlights = this.trip!.health[0].daily.reduce( (v, d) => Math.max(v, d.flights), maxFlights)
+    maxStepsDistance = this.trip!.daily.reduce( (v, d) =>
+      d.health.length > 0 ? 
+        Math.max(v, Math.max(d.health[0].steps, d.health[0].flights)) :
+        0, maxStepsDistance)
+    maxFlights = this.trip!.daily.reduce( (v, d) =>
+      d.health.length > 0 ? Math.max(v, d.health[0].flights) : 0, maxFlights)
 
     const axes = this.options.scales!.yAxes!
     axes[0]!.ticks!.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
     axes[1]!.ticks!.max = 5 * (1 + Math.floor(maxFlights / 5))
 
-    this.chartData.labels = this.trip!.health[0].daily.map((d) => d.day.slice(5))
+    this.chartData.labels = this.trip!.daily.map((d) => d.day.slice(5))
   }
 }
 </script>

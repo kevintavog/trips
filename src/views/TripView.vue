@@ -33,23 +33,23 @@
       </div>
     </div> -->
 
-    <div v-if="trip.dailyLocations && trip.dailyLocations.length > 0" >
-      <div class="day-row" v-for="loc in trip.dailyLocations" :key="loc.day+loc.name" >
+    <div  >
+      <div class="day-row" v-for="daily in trip.daily" :key="daily.day" >
 
         <div class="columns ">
           <div class="column is-vcentered">
-            {{ displayable.weekMonthDay(loc.day) }}
+            {{ displayable.weekMonthDay(daily.day) }}
           </div>
         </div>
 
-        <div class="columns" >
+        <div class="columns" v-for="country in daily.countries" :key="country.name" >
           <span class="column blank-column is-vcentered">
           </span>
-          <div class="column">
-            <b-tag v-if="trip.countries.length > 1" class="trip-country-tag has-text-light" size="is-medium" rounded>
-              {{ loc.name }}
+          <div class="column"  >
+            <b-tag class="trip-country-tag has-text-light" size="is-medium" rounded>
+              {{ country.name }}
             </b-tag>
-            <span v-for="city in loc.cities" :key="city.name" >
+            <span v-for="city in country.cities" :key="city.name" >
               <b-tag class="trip-city-tag has-text-light" size="is-medium" rounded >
                   {{ city.name }}
               </b-tag>
@@ -62,17 +62,29 @@
           </div>
         </div>
 
-        <div class="columns" >
-          <span class="column blank-column is-vcentered">
-          </span>
-          <div class="column">
-            <div v-for="health in healthByDay(loc.day)" :key="health.day" >
-              {{ health.sourceName }}: 
-              {{ health.totalSteps }} steps, 
-              {{ health.totalFlights }} flights of stairs, 
-              {{ displayable.detailedDistance(health.totalMeters) }}.
-            </div>
+
+        <div class="columns" v-for="health in healthByDay(daily.day)" :key="health.day" style="padding-top: 0.75em; padding-bottom: 1.75em;">
+          <div class="column blank-column is-vcentered">
           </div>
+          <div class="columns is-centered health-row" >
+            <div class="column health-column is-narrow has-text-centered is-4">
+              <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
+              {{ health.sourceName }}
+            </div>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="walking" size="is-small" class="health-icon" />
+              {{ health.steps }} steps
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+              {{ health.flights }} flights
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="ruler" size="is-small" class="health-icon" />
+              {{ displayable.detailedDistance(health.meters) }}
+            </span>
+          </div>
+
         </div>
 
       </div>
@@ -169,20 +181,12 @@ export default class TripView extends Vue {
 
   // TripHealth is returned because it has a `sourceName`
   private healthByDay(day: string): TripHealth[] {
-    const health: TripHealth[] = []
-    for (const h of this.trip!.health) {
-      const dayMatch = h.daily.filter( (d) => d.day === day)
-      if (dayMatch.length > 0) {
-        const first = dayMatch[0]
-        health.push({
-          sourceName: h.sourceName,
-          totalSteps: first.steps,
-          totalFlights: first.flights,
-          totalMeters: first.meters,
-          daily: []})
+    for (const d of this.trip!.daily) {
+      if (d.day === day) {
+        return d.health
       }
     }
-    return health
+    return []
   }
 
   private initializeChart() {
@@ -208,15 +212,16 @@ export default class TripView extends Vue {
     let maxStepsDistance = 0
     let maxFlights = 0
 
-    for (const h of this.trip!.health) {
-      maxStepsDistance = h.daily.reduce( (v, d) => Math.max(v, Math.max(d.steps, d.flights)), maxStepsDistance)
-      maxFlights = h.daily.reduce( (v, d) => Math.max(v, d.flights), maxFlights)
-
+    for (const daily of this.trip!.daily) {
+      maxStepsDistance = daily.health.reduce( (v, d) => Math.max(v, Math.max(d.steps, d.flights)), maxStepsDistance)
+      maxFlights = daily.health.reduce( (v, d) => Math.max(v, d.flights), maxFlights)
+    }
+/*
       this.chartData.datasets.push({
         backgroundColor: 'rgba(0, 227, 153, 0.7)',
         borderColor: 'rgba(0, 227, 153, 0.7)',
-        data: h.daily.map((d) => d.steps),
-        label: `Steps - ${h.sourceName}`,
+        data: daily.health.map((d) => d.steps),
+        label: `Steps - ${daily.sourceName}`,
         pointStyle: 'circle',
         pointRadius: 5,
         xAxisID: 'xaxis-big',
@@ -247,6 +252,7 @@ export default class TripView extends Vue {
     const axes = this.options.scales!.xAxes!
     axes[0]!.ticks!.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
     axes[1]!.ticks!.max = 5 * (1 + Math.floor(maxFlights / 5))
+*/
   }
 
 }
@@ -295,5 +301,18 @@ export default class TripView extends Vue {
 .blank-column {
   max-width: 5em;
 }
+
+.health-row {
+  background-color: #004b4b;
+  padding-left: 1.5em;
+  padding-right: 1.5em;
+  border-radius: 20em;
+}
+
+.health-icon {
+  color: hsl(203, 92%, 75%);
+  margin-right: 5px;
+}
+
 
 </style>

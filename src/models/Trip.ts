@@ -10,8 +10,8 @@ export interface Trip {
     endDate: Date
     endTimezoneId: string
     countries: TripCountry[]
-    dailyLocations: DayTripCountry[]
     health: TripHealth[]
+    daily: TripDayInfo[]
 }
 
 export const emptyTrip: Trip = {
@@ -21,8 +21,8 @@ export const emptyTrip: Trip = {
     endDate: new Date(),
     endTimezoneId: '',
     countries: [],
-    dailyLocations: [],
     health: [],
+    daily: [],
 }
 
 export interface TripCountry {
@@ -30,10 +30,10 @@ export interface TripCountry {
     cities: TripCity[]
 }
 
-export interface DayTripCountry {
+export interface TripDayInfo {
     day: string
-    name: string
-    cities: TripCity[]
+    countries: TripCountry[]
+    health: TripHealth[]
 }
 
 export interface TripCity {
@@ -43,10 +43,9 @@ export interface TripCity {
 
 export interface TripHealth {
     sourceName: string
-    totalSteps: number
-    totalFlights: number
-    totalMeters: number
-    daily: TripDayHealth[]
+    steps: number
+    flights: number
+    meters: number
 }
 
 export interface TripDayHealth {
