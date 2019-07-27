@@ -9,10 +9,10 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Inject, Vue } from 'vue-property-decorator'
 import TripList from '@/components/TripList.vue'
 import { TripResponse } from '@/models/Trip'
-import axios from 'axios'
+import { TripService } from '@/services/TripService'
 
 @Component({
   components: {
@@ -20,11 +20,12 @@ import axios from 'axios'
   },
 })
 export default class Home extends Vue {
+  @Inject('tripService') private tripService!: TripService
   private tripResponse: TripResponse = { trips: [] }
   private messages: string[] = []
 
   private mounted() {
-    this.loadTrips()
+    this.tripService!.loadTrips()
       .then((results) => {
         this.tripResponse = results
       })
@@ -32,21 +33,5 @@ export default class Home extends Vue {
         this.messages.push(`Failed loading: ` + err)
       })
   }
-
-  private loadTrips(): Promise<TripResponse> {
-    return new Promise((resolve, reject) => {
-        axios.get('data/trips.json')
-        .then((response) => {
-            resolve(response.data as TripResponse)
-        }, (err) => {
-          let message = err.message
-          if (err.response != null) {
-              message = `${err.response.status}: ${err.message}`
-          }
-          reject(message)
-        })
-    })
-  }
-
 }
 </script>

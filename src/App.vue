@@ -5,10 +5,12 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Provide, Vue } from 'vue-property-decorator'
+import { TripService } from '@/services/TripService'
 
 @Component
 export default class App extends Vue {
+  @Provide('tripService') private tripService = new TripService()
 }
 </script>
 

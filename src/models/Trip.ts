@@ -4,15 +4,34 @@ export interface TripResponse {
 }
 
 export interface Trip {
+    id: string
     startDate: Date
     startTimezoneId: string
     endDate: Date
     endTimezoneId: string
     countries: TripCountry[]
+    dailyLocations: DayTripCountry[]
     health: TripHealth[]
 }
 
+export const emptyTrip: Trip = {
+    id: '',
+    startDate: new Date(),
+    startTimezoneId: '',
+    endDate: new Date(),
+    endTimezoneId: '',
+    countries: [],
+    dailyLocations: [],
+    health: [],
+}
+
 export interface TripCountry {
+    name: string
+    cities: TripCity[]
+}
+
+export interface DayTripCountry {
+    day: string
     name: string
     cities: TripCity[]
 }

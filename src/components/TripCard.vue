@@ -7,22 +7,42 @@
           size="is-medium"
           v-for="country in trip.countries"
           :key="country.name"
-          rounded
-        >{{country.name}}</b-tag>
+          rounded >
+            {{country.name}}
+        </b-tag>
       </div>
-      <div
-        class="subtitle has-text-light"
-      >{{ dateOnly(trip.startDate, trip.startTimezoneId) }} - {{ dateOnly(trip.endDate, trip.endTimezoneId) }}</div>
+      <div class="subtitle has-text-light">
+        <router-link :to="{ path: 'trip', query: {id: trip.id} }">
+          {{ displayable.dateOnly(trip.startDate, trip.startTimezoneId) }} - 
+          {{ displayable.dateOnly(trip.endDate, trip.endTimezoneId) }}
+        </router-link>
+      </div>
 
       <div v-if="trip.health">
         <div class="canvas-container">
           <canvas class="health-chart" ref="canvas" />
         </div>
 
-        <div
-          v-for="health in trip.health"
-          :key="health.sourceName"
-        >{{ health.sourceName }}: {{ stepsString(health.totalSteps) }} steps, {{ health.totalFlights }} flights of stairs, {{ metersString(health.totalMeters) }}.</div>
+        <div style="padding-top: 0.75em; padding-bottom: 1.75em;" v-for="health in trip.health" :key="health.sourceName">
+          <div class="columns is-centered health-row" >
+            <span class="column health-column is-narrow has-text-centered is-3">
+              <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
+              {{ health.sourceName }}
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="walking" size="is-small" class="health-icon" />
+              {{ displayable.stepsString(health.totalSteps) }} steps
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+              {{ health.totalFlights }} flights
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="ruler" size="is-small" class="health-icon" />
+              {{ displayable.metersString(health.totalMeters) }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div class="content">
@@ -58,12 +78,14 @@
 <script lang="ts">
 import { Component, Inject, Prop, Vue } from 'vue-property-decorator'
 import { Trip, TripCity } from '@/models/Trip'
-import { DateTime } from 'luxon'
+import { displayable } from '@/utils/Displayable'
 import { Chart } from 'chart.js'
 
 @Component
 export default class TripCard extends Vue {
   @Prop({ required: true }) private trip!: Trip
+  private displayable = displayable
+
   private canvasElement?: HTMLCanvasElement
   private chart?: Chart
   private chartData: Chart.ChartData = {}
@@ -86,7 +108,7 @@ export default class TripCard extends Vue {
         display: false,
         position: 'left',
         id: 'y-axis-100',
-        gridLines: {        
+        gridLines: {
           color: 'rgba(255, 255, 255, 0.3)',
         },
         ticks: {
@@ -115,29 +137,6 @@ export default class TripCard extends Vue {
     this.setHealthDataSeries()
   }
 
-  private dateOnly(date: string | Date, timezoneId: string): string {
-    const l = DateTime.fromISO(date.toString(), { setZone: true }).setZone(timezoneId)
-    return `${l.weekdayLong}, ${l.toLocaleString()}`
-  }
-
-  private countryList(): string[] {
-    return this.trip.countries.map((c) => c.name)
-  }
-  private cityList(cities: TripCity[]): string[] {
-    return cities.map((c) => c.name)
-  }
-  private stepsString(count: number): string {
-    if (count < 3000) {
-      return `${count}`
-    }
-    return `${Math.floor(count / 1000)}K`
-  }
-  private metersString(distance: number): string {
-    if (distance < 5000) {
-      return `${Math.floor(distance)} meters`
-    }
-    return `${Math.floor(distance / 1000)} km`
-  }
 
   private initializeChart() {
     this.canvasElement = this.$refs['canvas'] as HTMLCanvasElement
@@ -187,7 +186,7 @@ export default class TripCard extends Vue {
       label: 'Flights',
       pointStyle: 'rect',
       type: 'bar',
-      yAxisID: "y-axis-1",
+      yAxisID: 'y-axis-1',
     })
 
     this.chartData.labels = this.trip!.health[0].daily.map((d) => d.day.slice(5))
@@ -196,10 +195,6 @@ export default class TripCard extends Vue {
   }
 }
 </script>
-
-
-<style>
-</style>
 
 
 <style scoped>
@@ -239,5 +234,17 @@ export default class TripCard extends Vue {
   height: 100%;
   margin: 0px;
   padding: 0px;
+}
+
+.health-row {
+  background-color: #004b4b;
+  padding-left: 1.5em;
+  padding-right: 1.5em;
+  border-radius: 20em;
+}
+
+.health-icon {
+  color: hsl(203, 92%, 75%);
+  margin-right: 5px;
 }
 </style>
