@@ -12,6 +12,11 @@ class Displayable {
     return `${l.weekdayLong}, ${l.toLocaleString()}`
   }
 
+  public timeOnly(date: string | Date): string {
+    const l = DateTime.fromISO(date.toString())
+    return `${l.toLocaleString(DateTime.TIME_SIMPLE)}`
+  }
+
   public countryList(trip: Trip): string[] {
     return trip.countries.map((c) => c.name)
   }

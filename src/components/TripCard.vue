@@ -208,7 +208,7 @@ export default class TripCard extends Vue {
     let maxStepsDistance = 0
     let maxFlights = 0
     maxStepsDistance = this.trip!.daily.reduce( (v, d) =>
-      d.health.length > 0 ? 
+      d.health.length > 0 ?
         Math.max(v, Math.max(d.health[0].steps, d.health[0].flights)) :
         0, maxStepsDistance)
     maxFlights = this.trip!.daily.reduce( (v, d) =>

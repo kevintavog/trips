@@ -34,6 +34,15 @@ export interface TripDayInfo {
     day: string
     countries: TripCountry[]
     health: TripHealth[]
+    images: TripImageInfo[]
+}
+
+export interface TripImageInfo {
+    thumbURL: string
+    createdDate: Date
+    city: string
+    country: string
+    sitename: string
 }
 
 export interface TripCity {

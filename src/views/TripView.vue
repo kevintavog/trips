@@ -4,98 +4,118 @@
       {{ m }}
     </b-notification>
 
-    <div class="title">
-      <b-tag
-        class="trip-country-tag has-text-light"
-        size="is-medium"
-        v-for="country in trip.countries"
-        :key="country.name"
-        rounded >
-          {{country.name}}
-      </b-tag>
-    </div>
-
-    <div class="subtitle has-text-light">
-      {{ displayable.dateOnly(trip.startDate, trip.startTimezoneId) }} - 
-      {{ displayable.dateOnly(trip.endDate, trip.endTimezoneId) }}
-    </div>
-
-    <!-- <div v-if="trip.health">
-      <div class="canvas-container">
-        <canvas class="health-chart" ref="canvas" />
+    <span v-if="isLoading">
+      <b-loading :active.sync="isLoading" />
+    </span>
+    <span v-else >
+      <div class="title">
+        <b-tag
+          class="trip-country-tag has-text-light"
+          size="is-medium"
+          v-for="country in trip.countries"
+          :key="country.name"
+          rounded >
+            {{country.name}}
+        </b-tag>
       </div>
 
-      <div v-for="health in trip.health" :key="health.sourceName" >
-        {{ health.sourceName }}: 
-        {{ displayable.stepsString(health.totalSteps) }} steps, 
-        {{ health.totalFlights }} flights of stairs, 
-        {{ displayable.metersString(health.totalMeters) }}.
+      <div class="subtitle has-text-light">
+        {{ displayable.dateOnly(trip.startDate, trip.startTimezoneId) }} - 
+        {{ displayable.dateOnly(trip.endDate, trip.endTimezoneId) }}
       </div>
-    </div> -->
 
-    <div  >
-      <div class="day-row" v-for="daily in trip.daily" :key="daily.day" >
+      <div  >
+        <div class="day-row" v-for="daily in trip.daily" :key="daily.day" >
 
-        <div class="columns ">
-          <div class="column is-vcentered">
-            {{ displayable.weekMonthDay(daily.day) }}
-          </div>
-        </div>
-
-        <div class="columns" v-for="country in daily.countries" :key="country.name" >
-          <span class="column blank-column is-vcentered">
-          </span>
-          <div class="column"  >
-            <b-tag class="trip-country-tag has-text-light" size="is-medium" rounded>
-              {{ country.name }}
-            </b-tag>
-            <span v-for="city in country.cities" :key="city.name" >
-              <b-tag class="trip-city-tag has-text-light" size="is-medium" rounded >
-                  {{ city.name }}
-              </b-tag>
-              <span v-for="site in city.sites" :key="site" >
-                <b-tag class="trip-site-tag has-text-light" size="is-medium" rounded >
-                  {{ site }}
-                </b-tag>
-              </span>
-            </span>
-          </div>
-        </div>
-
-
-        <div class="columns" v-for="health in healthByDay(daily.day)" :key="health.day" style="padding-top: 0.75em; padding-bottom: 1.75em;">
-          <div class="column blank-column is-vcentered">
-          </div>
-          <div class="columns is-centered health-row" >
-            <div class="column health-column is-narrow has-text-centered is-4">
-              <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
-              {{ health.sourceName }}
+          <div class="columns " style="margin-left: 0.1em;">
+            <div class="column is-vcentered">
+              {{ displayable.weekMonthDay(daily.day) }}
             </div>
-            <span class="column health-column is-narrow has-text-centered">
-              <b-icon icon="walking" size="is-small" class="health-icon" />
-              {{ health.steps }} steps
+          </div>
+
+          <div class="is-pulled-right day-image" >
+            <div v-for="img in randomDailyImage(daily)" :key="img.thumbURL">
+              <img :src="img.thumbURL" />
+              <div style="max-width: 20em;">
+                <span v-if="img.sitename.length > 0"> {{ img.sitename }}, </span>
+                <span v-if="img.city.length > 0"> {{ img.city }} </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="columns" v-for="country in daily.countries" :key="country.name" >
+            <span class="column blank-column is-vcentered">
             </span>
-            <span class="column health-column is-narrow has-text-centered">
-              <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
-              {{ health.flights }} flights
-            </span>
-            <span class="column health-column is-narrow has-text-centered">
-              <b-icon icon="ruler" size="is-small" class="health-icon" />
-              {{ displayable.detailedDistance(health.meters) }}
-            </span>
+            <div class="column"  >
+              <b-tag class="trip-country-tag has-text-light" size="is-medium" rounded>
+                {{ country.name }}
+              </b-tag>
+              <span v-for="city in country.cities" :key="city.name" >
+                <b-tag class="trip-city-tag has-text-light" size="is-medium" rounded >
+                    {{ city.name }}
+                </b-tag>
+                <span v-for="site in city.sites" :key="site" >
+                  <b-tag class="trip-site-tag has-text-light" size="is-medium" rounded >
+                    {{ site }}
+                  </b-tag>
+                </span>
+              </span>
+            </div>
+          </div>
+
+
+          <div class="columns" v-for="health in healthByDay(daily.day)" :key="health.day" 
+                style="padding-top: 0.75em; padding-bottom: 1.75em;">
+            <div class="column blank-column is-vcentered">
+            </div>
+            <div class="columns is-centered health-row" >
+              <div class="column health-column is-narrow has-text-centered is-4">
+                <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
+                {{ health.sourceName }}
+              </div>
+              <span class="column health-column is-narrow has-text-centered">
+                <b-icon icon="walking" size="is-small" class="health-icon" />
+                {{ health.steps }} steps
+              </span>
+              <span class="column health-column is-narrow has-text-centered">
+                <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+                {{ health.flights }} flights
+              </span>
+              <span class="column health-column is-narrow has-text-centered">
+                <b-icon icon="ruler" size="is-small" class="health-icon" />
+                {{ displayable.detailedDistance(health.meters) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="columns" style="padding-top: 0.75em; padding-bottom: 1.75em;">
+            <div class="column blank-column is-vcentered">
+            </div>
+            <div class="columns is-centered images-row">
+              <div class="column" v-if="daily.images.length === 0">
+                No pictures 🙁
+              </div>
+              <div class="column" v-if="daily.images.length === 1">
+                1 picture, taken at {{displayable.timeOnly(daily.images[0].createdDate)}}
+              </div>
+              <div class="column" v-if="daily.images.length > 1">
+                {{daily.images.length}} pictures, from 
+                  {{ displayable.timeOnly(daily.images[0].createdDate)}} to
+                  {{ displayable.timeOnly(daily.images[daily.images.length - 1].createdDate)}}
+              </div>
+            </div>
           </div>
 
         </div>
-
       </div>
-    </div>
+    </span>
 
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Inject, Prop, Vue } from 'vue-property-decorator'
-import { emptyTrip, Trip, TripHealth } from '@/models/Trip'
+import { emptyTrip, Trip, TripDayInfo, TripHealth, TripImageInfo } from '@/models/Trip'
 import { TripService } from '@/services/TripService'
 import { displayable } from '@/utils/Displayable'
 import { Chart } from 'chart.js'
@@ -104,6 +124,7 @@ import { Chart } from 'chart.js'
 export default class TripView extends Vue {
   @Inject('tripService') private tripService!: TripService
   private trip: Trip = emptyTrip
+  private isLoading = true
   private messages: string[] = []
   private displayable = displayable
 
@@ -171,11 +192,13 @@ export default class TripView extends Vue {
     this.tripService!.getTrip(id)
       .then((results) => {
         this.trip = results
+        this.isLoading = false
         // this.setHealthDataSeries()
         // this.initializeChart()
       })
       .catch((err) => {
         this.messages.push(`Failed loading: ` + err)
+        this.isLoading = false
       })
   }
 
@@ -187,6 +210,14 @@ export default class TripView extends Vue {
       }
     }
     return []
+  }
+
+  private randomDailyImage(daily: TripDayInfo): [TripImageInfo] {
+    if (daily.images && daily.images.length > 0) {
+      const index = Math.floor(Math.random() * (daily.images.length))
+      return [daily.images[index]]
+    }
+    return [{ thumbURL: '', createdDate: new Date(), city: '', country: '', sitename: '' }]
   }
 
   private initializeChart() {
@@ -296,16 +327,25 @@ export default class TripView extends Vue {
 
 .day-row {
   margin-bottom: 1.5em;
+  background-color: #3c3c3c;
+}
+
+.day-image {
+  padding: 1em;
+  margin-right: 0.75em;
+  margin-bottom: 0.75em;
+  background-color: #1a1105;
+  border-radius: 1em;
 }
 
 .blank-column {
-  max-width: 5em;
+  max-width: 3em;
 }
 
 .health-row {
   background-color: #004b4b;
   padding-left: 1.5em;
-  padding-right: 1.5em;
+  padding-right: 2.5em;
   border-radius: 20em;
 }
 
@@ -314,5 +354,11 @@ export default class TripView extends Vue {
   margin-right: 5px;
 }
 
+.images-row {
+  background-color: #a0522d;
+  padding-left: 1.5em;
+  padding-right: 1.5em;
+  border-radius: 20em;
+}
 
 </style>
