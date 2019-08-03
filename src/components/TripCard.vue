@@ -25,27 +25,7 @@
             <canvas class="health-chart" ref="canvas" />
           </div>
           <div class="chart-legend has-text-centered">
-            <span>
-              <span class="fa-stack trp-text-steps-color" style="vertical-align: top;">
-                <i class="fas fa-square fa-stack-2x"></i>
-                <i class="fas fa-walking fa-stack-1x fa-inverse"></i>
-              </span>
-              Steps
-            </span>
-            <span>
-              <span class="fa-stack trp-text-distance-color" style="vertical-align: top;">
-                <i class="fas fa-square fa-stack-2x"></i>
-                <i class="fas fa-ruler fa-stack-1x fa-inverse"></i>
-              </span>
-              Distance (km)
-            </span>
-            <span>
-              <span class="fa-stack trp-text-flights-color" style="vertical-align: top;">
-                <i class="fas fa-square fa-stack-2x"></i>
-                <i class="fas fa-shoe-prints fa-stack-1x fa-inverse"></i>
-              </span>
-              Flights
-            </span>
+            <health-chart-label />
           </div>
 
           <div style="padding-top: 0.75em; padding-bottom: 1.75em;" v-for="health in trip.health" :key="health.sourceName">
@@ -55,11 +35,11 @@
                 {{ health.sourceName }}
               </span>
               <span class="column health-column is-narrow has-text-centered">
-                <b-icon icon="walking" size="is-small" class="health-icon" />
+                <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
                 {{ displayable.stepsString(health.steps) }} steps
               </span>
               <span class="column health-column is-narrow has-text-centered">
-                <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+                <b-icon icon="signal" size="is-small" class="health-icon" />
                 {{ health.flights }} flights
               </span>
               <span class="column health-column is-narrow has-text-centered">
@@ -88,11 +68,16 @@
 
 <script lang="ts">
 import { Component, Inject, Prop, Vue } from 'vue-property-decorator'
-import { Trip, TripCity } from '@/models/Trip'
+import { Trip, TripCity, TripHealth } from '@/models/Trip'
+import HealthChartLabel from '@/components/HealthChartLabel.vue'
 import { displayable } from '@/utils/Displayable'
 import { Chart } from 'chart.js'
 
-@Component
+@Component({
+  components: {
+    HealthChartLabel,
+  },
+})
 export default class TripCard extends Vue {
   @Prop({ required: true }) private trip!: Trip
   private displayable = displayable
@@ -174,11 +159,12 @@ export default class TripCard extends Vue {
       return
     }
 
+    const dailyFirst = this.trip!.dailyHealth.filter((d) => d.sourceName === this.trip!.health[0].sourceName )
     this.chartData.datasets = []
     this.chartData.datasets.push({
       backgroundColor: 'rgba(0, 0, 0, 0)',
       borderColor: 'rgba(0, 227, 153, 0.7)',
-      data: this.trip!.daily.map((d) => d.health.length > 0 ? d.health[0].steps : 0),
+      data: dailyFirst.map((d) => d.steps),
       label: 'Steps',
       type: 'line',
       yAxisID: 'y-axis-100',
@@ -188,7 +174,7 @@ export default class TripCard extends Vue {
     this.chartData.datasets.push({
       backgroundColor: 'rgba(0, 0, 0, 0)',
       borderColor: 'rgba(0, 143, 253, 0.7)',
-      data: this.trip!.daily.map((d) => d.health.length > 0 ? Math.floor(d.health[0].meters) : 0),
+      data: dailyFirst.map((d) => Math.floor(d.meters)),
       fill: true,
       label: 'Meters',
       type: 'line',
@@ -198,7 +184,7 @@ export default class TripCard extends Vue {
     this.chartData.datasets.push({
       backgroundColor: 'rgba(254, 216, 25, 0.7)',
       borderColor: 'rgba(254, 216, 25, 0.7)',
-      data: this.trip!.daily.map((d) => d.health.length > 0 ? d.health[0].flights : 0),
+      data: dailyFirst.map((d) => d.flights),
       label: 'Flights',
       type: 'bar',
       yAxisID: 'y-axis-1',
@@ -207,18 +193,16 @@ export default class TripCard extends Vue {
 
     let maxStepsDistance = 0
     let maxFlights = 0
-    maxStepsDistance = this.trip!.daily.reduce( (v, d) =>
-      d.health.length > 0 ?
-        Math.max(v, Math.max(d.health[0].steps, d.health[0].flights)) :
-        0, maxStepsDistance)
-    maxFlights = this.trip!.daily.reduce( (v, d) =>
-      d.health.length > 0 ? Math.max(v, d.health[0].flights) : 0, maxFlights)
+    maxStepsDistance = dailyFirst.reduce( (v: number, d: TripHealth) => 
+      Math.max(v, Math.max(d.steps, d.meters)), maxStepsDistance)
+    maxFlights = dailyFirst.reduce( (v, d) =>
+      Math.max(v, d.flights), maxFlights)
 
     const axes = this.options.scales!.yAxes!
     axes[0]!.ticks!.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
-    axes[1]!.ticks!.max = 5 * (1 + Math.floor(maxFlights / 5))
+    axes[1]!.ticks!.max = 10 * (1 + Math.floor(maxFlights / 10))
 
-    this.chartData.labels = this.trip!.daily.map((d) => d.day.slice(5))
+    this.chartData.labels = dailyFirst.map((d) => d.date.slice(5, 10))
   }
 }
 </script>

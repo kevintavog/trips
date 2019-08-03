@@ -4,10 +4,17 @@
       {{ m }}
     </b-notification>
 
-    <span v-if="isLoading">
-      <b-loading :active.sync="isLoading" />
+    <span v-if="isLoadingTrip">
+      <b-loading :active.sync="isLoadingTrip" />
     </span>
     <span v-else >
+      <b-modal :active.sync="isHealthChartModalActive" scroll="keep">
+        <health-chart :title="healthChartTitle" :health="healthChartItems" :labels="healthChartLabels" />
+      </b-modal>
+      <b-modal :active.sync="isImageViewerModalActive" scroll="keep">
+        <image-viewer :title="imageViewerTitle" :images="imageViewerItems" />
+      </b-modal>
+
       <div class="title">
         <b-tag
           class="trip-country-tag has-text-light"
@@ -24,8 +31,37 @@
         {{ displayable.dateOnly(trip.endDate, trip.endTimezoneId) }}
       </div>
 
+      <div class="trip-overview">
+        Overview:
+        <div style="padding-top: 0.75em; padding-bottom: 1.75em;" v-for="health in trip.health" :key="health.sourceName">
+          <div class="columns is-centered health-row" @click="showOverviewHealth(health.sourceName)">
+            <span class="column health-column is-narrow has-text-centered is-3">
+              <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
+              {{ health.sourceName }}
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+              {{ displayable.stepsString(health.steps) }} steps
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="signal" size="is-small" class="health-icon" />
+              {{ health.flights }} flights
+            </span>
+            <span class="column health-column is-narrow has-text-centered">
+              <b-icon icon="ruler" size="is-small" class="health-icon" />
+              {{ displayable.metersString(health.meters) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </span>
+
+    <span v-if="isLoadingDetails">
+      <b-loading :active.sync="isLoadingDetails" />
+    </span>
+    <span v-else>
       <div  >
-        <div class="day-row" v-for="daily in trip.daily" :key="daily.day" >
+        <div class="day-row" v-for="daily in details.daily" :key="daily.day" >
 
           <div class="columns " style="margin-left: 0.1em;">
             <div class="column is-vcentered">
@@ -46,7 +82,7 @@
           <div class="columns" v-for="country in daily.countries" :key="country.name" >
             <span class="column blank-column is-vcentered">
             </span>
-            <div class="column"  >
+            <div class="column" >
               <b-tag class="trip-country-tag has-text-light" size="is-medium" rounded>
                 {{ country.name }}
               </b-tag>
@@ -68,17 +104,17 @@
                 style="padding-top: 0.75em; padding-bottom: 1.75em;">
             <div class="column blank-column is-vcentered">
             </div>
-            <div class="columns is-centered health-row" >
+            <div class="columns is-centered health-row" @click="showDailyHealth(health)">
               <div class="column health-column is-narrow has-text-centered is-4">
                 <b-icon icon="mobile-alt" size="is-small" class="health-icon" />
                 {{ health.sourceName }}
               </div>
               <span class="column health-column is-narrow has-text-centered">
-                <b-icon icon="walking" size="is-small" class="health-icon" />
+                <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
                 {{ health.steps }} steps
               </span>
               <span class="column health-column is-narrow has-text-centered">
-                <b-icon icon="shoe-prints" size="is-small" class="health-icon" />
+                <b-icon icon="signal" size="is-small" class="health-icon" />
                 {{ health.flights }} flights
               </span>
               <span class="column health-column is-narrow has-text-centered">
@@ -91,7 +127,8 @@
           <div class="columns" style="padding-top: 0.75em; padding-bottom: 1.75em;">
             <div class="column blank-column is-vcentered">
             </div>
-            <div class="columns is-centered images-row">
+            <div class="columns is-centered images-row"
+                  @click="showImages(displayable.weekMonthDay(daily.day), daily.images)">
               <div class="column" v-if="daily.images.length === 0">
                 No pictures 🙁
               </div>
@@ -115,73 +152,59 @@
 
 <script lang="ts">
 import { Component, Inject, Prop, Vue } from 'vue-property-decorator'
-import { emptyTrip, Trip, TripDayInfo, TripHealth, TripImageInfo } from '@/models/Trip'
+import { emptyTrip, Trip, TripDailyDetails, TripDayInfo, TripHealth, TripImageInfo } from '@/models/Trip'
 import { TripService } from '@/services/TripService'
+import HealthChart from '@/components/HealthChart.vue'
+import ImageViewer from '@/components/ImageViewer.vue'
 import { displayable } from '@/utils/Displayable'
-import { Chart } from 'chart.js'
 
-@Component({})
+@Component({
+  components: {
+    HealthChart,
+    ImageViewer,
+  },
+})
 export default class TripView extends Vue {
   @Inject('tripService') private tripService!: TripService
   private trip: Trip = emptyTrip
-  private isLoading = true
+  private details: TripDailyDetails = { daily: [] }
+  private isLoadingTrip = true
+  private isLoadingDetails = true
   private messages: string[] = []
   private displayable = displayable
 
-  private canvasElement?: HTMLCanvasElement
-  private chart?: Chart
-  private chartData: Chart.ChartData = {
-    datasets: [],
-  }
-  private options: Chart.ChartOptions = {
-    animation: {
-      duration: 0,
-    },
-    legend: {
-      position: 'right',
-    },
-    tooltips: {
-      enabled: true,
-      mode: 'index',
-      intersect: false,
-      position: 'nearest',
-      bodySpacing: 10,
-      xPadding: 10,
-      yPadding: 10,
-      titleSpacing: 4,
-    },
-    responsive: true,
-    responsiveAnimationDuration: 0,
-    maintainAspectRatio: false,
-    scales: {
-      xAxes: [{
-        type: 'linear',
-        display: true,
-        position: 'bottom',
-        id: 'xaxis-big',
-        gridLines: {
-          color: 'rgba(255, 255, 255, 0.3)',
-        },
-        ticks: {
-          min: 0,
-          max: 35000,
-        },
-      }, {
-        type: 'linear',
-        display: true,
-        position: 'top',
-        id: 'xaxis-small',
-        gridLines: {
-          drawOnChartArea: false, // only want the grid lines for one axis to show up
-        },
-        ticks: {
-          min: 0,
-          max: 100,
-        },
-      }],
-    },
+  private isHealthChartModalActive = false
+  private healthChartItems: TripHealth[] = []
+  private healthChartLabels: string[] = []
+  private healthChartTitle: string = ''
+
+  private isImageViewerModalActive = false
+  private imageViewerTitle: string = ''
+  private imageViewerItems: TripImageInfo[] = []
+
+
+  private showImages(day: string, images: TripImageInfo[]) {
+    this.imageViewerTitle = `Images for ${day}`
+    this.imageViewerItems = images
+    this.isImageViewerModalActive = true
   }
 
+  private showOverviewHealth(sourceName: string) {
+    this.healthChartItems = []
+    this.healthChartLabels = []
+    this.healthChartTitle = `All '${sourceName}' data for this trip`
+    const dailyHealth = this.trip!.dailyHealth.filter((h) => h.sourceName === sourceName)
+
+    dailyHealth.forEach( (h) => {
+        this.healthChartItems.push(h)
+        this.healthChartLabels.push(h.date.toString().slice(5, 10))
+      })
+
+    this.isHealthChartModalActive = true
+  }
+
+  private showDailyHealth(health: TripHealth) {
+  }
 
   private mounted() {
     const props = this.$route.query
@@ -192,24 +215,34 @@ export default class TripView extends Vue {
     this.tripService!.getTrip(id)
       .then((results) => {
         this.trip = results
-        this.isLoading = false
-        // this.setHealthDataSeries()
-        // this.initializeChart()
       })
       .catch((err) => {
-        this.messages.push(`Failed loading: ` + err)
-        this.isLoading = false
+        this.messages.push(`Failed loading trip: ` + err)
+      })
+      .finally(() => {
+        this.isLoadingTrip = false
+      })
+    this.tripService!.getDayInfo(id)
+      .then((results) => {
+        this.details = results
+      })
+      .catch((err) => {
+        this.messages.push(`Failed loading day info: ` + err)
+      })
+      .finally(() => {
+        this.isLoadingDetails = false
       })
   }
 
   // TripHealth is returned because it has a `sourceName`
   private healthByDay(day: string): TripHealth[] {
-    for (const d of this.trip!.daily) {
-      if (d.day === day) {
-        return d.health
+    let health:TripHealth[] = []
+    for (const h of this.trip.dailyHealth) {
+      if (h.date === day) {
+        health.push(h)
       }
     }
-    return []
+    return health
   }
 
   private randomDailyImage(daily: TripDayInfo): [TripImageInfo] {
@@ -219,73 +252,6 @@ export default class TripView extends Vue {
     }
     return [{ thumbURL: '', createdDate: new Date(), city: '', country: '', sitename: '' }]
   }
-
-  private initializeChart() {
-    this.canvasElement = this.$refs[`canvas`] as HTMLCanvasElement
-    Chart.defaults.global.defaultFontColor = 'rgba(255, 255, 255, 255)'
-    this.chart = new Chart(
-      this.canvasElement, {
-        type: 'horizontalBar',
-        data: this.chartData,
-        options: this.options,
-      })
-
-    this.chart!.update( {duration: 0} )
-  }
-
-  private setHealthDataSeries() {
-    if (!this.trip || !this.trip!.health || this.trip!.health.length < 1) {
-      return
-    }
-
-    this.chartData.datasets = []
-
-    let maxStepsDistance = 0
-    let maxFlights = 0
-
-    for (const daily of this.trip!.daily) {
-      maxStepsDistance = daily.health.reduce( (v, d) => Math.max(v, Math.max(d.steps, d.flights)), maxStepsDistance)
-      maxFlights = daily.health.reduce( (v, d) => Math.max(v, d.flights), maxFlights)
-    }
-/*
-      this.chartData.datasets.push({
-        backgroundColor: 'rgba(0, 227, 153, 0.7)',
-        borderColor: 'rgba(0, 227, 153, 0.7)',
-        data: daily.health.map((d) => d.steps),
-        label: `Steps - ${daily.sourceName}`,
-        pointStyle: 'circle',
-        pointRadius: 5,
-        xAxisID: 'xaxis-big',
-      })
-
-      this.chartData.datasets.push({
-        backgroundColor: 'rgba(0, 143, 253, 0.7)',
-        borderColor: 'rgba(0, 143, 253, 0.7)',
-        data: h.daily.map((d) => Math.floor(d.meters)),
-        label: `Meters - ${h.sourceName}`,
-        pointRadius: 5,
-        pointStyle: 'triangle',
-        xAxisID: 'xaxis-big',
-      })
-
-      this.chartData.datasets.push({
-        backgroundColor: 'rgba(254, 216, 25, 0.7)',
-        borderColor: 'rgba(254, 216, 25, 0.7)',
-        data: h.daily.map((d) => d.flights),
-        label: `Flights - ${h.sourceName}`,
-        pointStyle: 'rect',
-        xAxisID: 'xaxis-small',
-      })
-    }
-
-    this.chartData.labels = this.trip!.health[0].daily.map((d) => d.day.slice(5))
-
-    const axes = this.options.scales!.xAxes!
-    axes[0]!.ticks!.max = 5000 * (1 + Math.floor(maxStepsDistance / 5000))
-    axes[1]!.ticks!.max = 5 * (1 + Math.floor(maxFlights / 5))
-*/
-  }
-
 }
 </script>
 
@@ -294,6 +260,12 @@ export default class TripView extends Vue {
 .tripview {
   margin: 0.5em;
   color: white;
+}
+
+.trip-overview {
+  max-width: 35em;
+  margin-left: 1em;
+  margin-bottom: 3em;
 }
 
 .trip-country-tag {
@@ -314,20 +286,10 @@ export default class TripView extends Vue {
   margin-right: 3px;
 }
 
-.canvas-container {
-  width: 90%;
-}
-
-.health-chart {
-  width: 100%;
-  height: 100%;
-  margin: 0px;
-  padding: 0px;
-}
-
 .day-row {
   margin-bottom: 1.5em;
   background-color: #3c3c3c;
+  overflow: auto;
 }
 
 .day-image {

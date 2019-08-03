@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Trip, TripResponse } from '@/models/Trip'
+import { Trip, TripDailyDetails, TripResponse } from '@/models/Trip'
 
 export class TripService {
   private tripResponse?: TripResponse
@@ -31,6 +31,22 @@ export class TripService {
           })
           resolve(response.trips[0])
           reject(`No trip found: ${id}`)
+        }, (err) => {
+          reject(this.getErrorMessage(err))
+        })
+    })
+  }
+
+  public getDayInfo(id: string): Promise<TripDailyDetails> {
+    return new Promise((resolve, reject) => {
+      this.loadTrips()
+        .then((response) => {
+          axios.get(`data/${id}.json`)
+          .then((rsp) => {
+            resolve(rsp.data as TripDailyDetails)
+          }, (err) => {
+            reject(this.getErrorMessage(err))
+          })
         }, (err) => {
           reject(this.getErrorMessage(err))
         })

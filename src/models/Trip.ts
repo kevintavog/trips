@@ -11,7 +11,7 @@ export interface Trip {
     endTimezoneId: string
     countries: TripCountry[]
     health: TripHealth[]
-    daily: TripDayInfo[]
+    dailyHealth: TripHealth[]
 }
 
 export const emptyTrip: Trip = {
@@ -22,7 +22,7 @@ export const emptyTrip: Trip = {
     endTimezoneId: '',
     countries: [],
     health: [],
-    daily: [],
+    dailyHealth: [],
 }
 
 export interface TripCountry {
@@ -30,11 +30,16 @@ export interface TripCountry {
     cities: TripCity[]
 }
 
+export interface TripDailyDetails {
+    daily: TripDayInfo[]
+}
+
 export interface TripDayInfo {
     day: string
     countries: TripCountry[]
     health: TripHealth[]
     images: TripImageInfo[]
+    detailedHealth: TripHealth[]
 }
 
 export interface TripImageInfo {
@@ -55,11 +60,5 @@ export interface TripHealth {
     steps: number
     flights: number
     meters: number
-}
-
-export interface TripDayHealth {
-    day: string
-    steps: number
-    flights: number
-    meters: number
+    date: string
 }
